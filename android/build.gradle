@@ -17,6 +17,7 @@ buildscript {
   repositories {
     google()
     mavenCentral()
+    maven { url 'https://jitpack.io' }
   }
 
   dependencies {
@@ -26,16 +27,36 @@ buildscript {
   }
 }
 
-def reactNativeArchitectures() {
-  def value = rootProject.getProperties().get("reactNativeArchitectures")
-  return value ? value.split(",") : ["armeabi-v7a", "x86", "x86_64", "arm64-v8a"]
+repositories {
+  maven { url 'https://jitpack.io' }
 }
 
 apply plugin: "com.android.library"
 apply plugin: "kotlin-android"
-apply from: '../nitrogen/generated/android/samsungpayreactnative+autolinking.gradle'
 
 apply plugin: "com.facebook.react"
+
+// Remove RN core codegen output so we don't ship duplicate specs (app already has them).
+def codegenJavaDir = file("${buildDir}/generated/source/codegen/java")
+tasks.register("stripReactNativeCodegen") {
+  doLast {
+    def specsDir = new File(codegenJavaDir, "com/facebook/fbreact/specs")
+    if (specsDir.exists()) {
+      specsDir.deleteDir()
+    }
+    def viewManagersDir = new File(codegenJavaDir, "com/facebook/react/viewmanagers")
+    if (viewManagersDir.exists()) {
+      viewManagersDir.listFiles()?.each { f ->
+        if (!f.name.startsWith("NativeSamsungPayView")) {
+          f.delete()
+        }
+      }
+    }
+  }
+}
+tasks.named("generateCodegenArtifactsFromSchema").configure {
+  finalizedBy stripReactNativeCodegen
+}
 
 android {
   namespace "com.margelo.nitro.samsungpayreactnative"
@@ -45,55 +66,6 @@ android {
   defaultConfig {
     minSdkVersion getExtOrDefault("minSdkVersion")
     targetSdkVersion getExtOrDefault("targetSdkVersion")
-
-    externalNativeBuild {
-      cmake {
-        cppFlags "-frtti -fexceptions -Wall -fstack-protector-all"
-        arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
-        abiFilters (*reactNativeArchitectures())
-
-        buildTypes {
-          debug {
-            cppFlags "-O1 -g"
-          }
-          release {
-            cppFlags "-O2"
-          }
-        }
-      }
-    }
-  }
-
-  externalNativeBuild {
-    cmake {
-      path "CMakeLists.txt"
-    }
-  }
-
-  packagingOptions {
-    excludes = [
-      "META-INF",
-      "META-INF/**",
-      "**/libc++_shared.so",
-      "**/libfbjni.so",
-      "**/libjsi.so",
-      "**/libfolly_json.so",
-      "**/libfolly_runtime.so",
-      "**/libglog.so",
-      "**/libhermes.so",
-      "**/libhermes-executor-debug.so",
-      "**/libhermes_executor.so",
-      "**/libreactnative.so",
-      "**/libreactnativejni.so",
-      "**/libturbomodulejsijni.so",
-      "**/libreact_nativemodule_core.so",
-      "**/libjscexecutor.so"
-    ]
-  }
-
-  buildFeatures {
-    buildConfig true
-    prefab true
   }
 
   buildTypes {
@@ -113,6 +85,21 @@ android {
 }
 
 dependencies {
-  implementation "com.facebook.react:react-android"
-  implementation project(":react-native-nitro-modules")
+  compileOnly "com.facebook.react:react-android"
+  implementation 'com.github.Tap-Payments:SamsungPay-Android:1.0.7'
+
+  // Transitive dependencies of SamsungPay-Android SDK.
+  // JitPack AARs only export 'api' scoped deps in their POM; 'implementation' deps must be
+  // declared explicitly here so they are included in the final APK.
+  implementation 'com.github.Tap-Payments:TapNetwrok-Android:0.2.2.44'
+  implementation 'com.github.Tap-Payments:CommonDataModelsWeb-Andriod:0.0.13'
+  implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+  implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+  implementation 'com.squareup.okhttp3:logging-interceptor:4.10.0'
+  implementation 'com.google.code.gson:gson:2.10'
+  implementation 'com.intuit.sdp:sdp-android:1.1.0'
+  implementation 'androidx.webkit:webkit:1.11.0'
+  implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.6.2'
+  implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2'
+  implementation 'androidx.lifecycle:lifecycle-process:2.6.2'
 }
