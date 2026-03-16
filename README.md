@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
 
 - [Tap Payments Documentation](https://tap.company/)
 - [Samsung Pay Android SDK (GitHub)](https://github.com/Tap-Payments/SamsungPay-Android)
-
+- [Samsung Pay RN SDK (GitHub)](https://github.com/Tap-Payments/samsung-pay-react-native)
 ---
 
 ## License

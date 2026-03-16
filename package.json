@@ -46,14 +46,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mAllamTapPayments/samsung-pay-react-native.git"
+    "url": "git+https://github.com/Tap-Payments/samsung-pay-react-native.git"
   },
   "author": "MahmoudAllam <m.allam@tap.company> (https://github.com/mAllamTapPayments)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mAllamTapPayments/samsung-pay-react-native/issues"
+    "url": "https://github.com/Tap-Payments/samsung-pay-react-native/issues"
   },
-  "homepage": "https://github.com/mAllamTapPayments/samsung-pay-react-native#readme",
+  "homepage": "https://github.com/Tap-Payments/samsung-pay-react-native#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
