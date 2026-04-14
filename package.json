@@ -3,9 +3,18 @@
   "version": "1.0.0",
   "description": "react-native wrapper for android samgung pay ",
   "main": "./lib/module/index.js",
+  "codegenConfig": {
+    "name": "SamsungPayReactNativeSpec",
+    "type": "all",
+    "jsSrcsDir": "src",
+    "android": {
+      "javaPackageName": "com.margelo.nitro.samsungpayreactnative"
+    }
+  },
   "types": "./lib/typescript/src/index.d.ts",
   "exports": {
     ".": {
+      "react-native": "./src/index.tsx",
       "source": "./src/index.tsx",
       "types": "./lib/typescript/src/index.d.ts",
       "default": "./lib/module/index.js"

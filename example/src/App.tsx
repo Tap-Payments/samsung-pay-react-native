@@ -22,7 +22,7 @@ const config: SamsungPayConfiguration = {
     },
     name: [{ lang: 'en', first: 'TAP', middle: '', last: 'PAYMENTS' }],
   },
-  interface: { locale: 'en', edges: 'curved' },
+  interface: { locale: 'en', edges: 'curved', theme: 'light' },
   reference: { transaction: '', order: '' },
   post: { url: '' },
   scope: 'charge',

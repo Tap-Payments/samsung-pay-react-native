@@ -39,6 +39,7 @@ export interface SamsungPayMerchant {
 export interface SamsungPayInterface {
   locale: 'en' | 'ar';
   edges: 'curved' | 'flat';
+  theme: 'light' | 'dark';
 }
 
 export interface SamsungPayReference {
