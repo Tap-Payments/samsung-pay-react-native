@@ -1,6 +1,6 @@
 {
   "name": "samsung-pay-react-native",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "react-native wrapper for android samgung pay ",
   "main": "./lib/module/index.js",
   "codegenConfig": {
