@@ -57,6 +57,12 @@ class SamsungPayViewManager :
 
     override fun setConfiguration(view: TapSamsungPay, value: String?) {
         if (value.isNullOrEmpty()) return
+        // Fabric re-sends props whenever the parent re-renders. Skip if this exact configuration
+        // is already applied to this view so the SDK doesn't re-run its network configure
+        // (base_url.json + config) on every re-render. A fresh view (after a key remount) has a
+        // null tag and configures once.
+        if (view.tag == value) return
+        view.tag = value
         val reactContext = view.context as? ThemedReactContext ?: return
         val activity = reactContext.currentActivity ?: return
         val configMap = jsonObjectToHashMap(JSONObject(value))

@@ -86,7 +86,7 @@ android {
 
 dependencies {
   compileOnly "com.facebook.react:react-android"
-  implementation 'com.github.Tap-Payments:SamsungPay-Android:1.0.8'
+  implementation 'com.github.Tap-Payments:SamsungPay-Android:1.0.9'
 
   // Transitive dependencies of SamsungPay-Android SDK.
   // JitPack AARs only export 'api' scoped deps in their POM; 'implementation' deps must be

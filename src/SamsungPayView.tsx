@@ -1,4 +1,10 @@
-import React, { useRef, useCallback, useEffect, useMemo } from 'react';
+import React, {
+  useRef,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+} from 'react';
 import {
   Platform,
   StyleSheet,
@@ -124,6 +130,8 @@ export function TapSamsungPay({
   onSamsungPayError,
 }: Readonly<TapSamsungPayProps>): React.ReactElement | null {
   const inProgress = useRef(false);
+  // Bumping this key remounts the native view, giving a fresh button identical to first launch.
+  const [reloadKey, setReloadKey] = useState(0);
 
   const handleReady = useCallback(() => {
     onSamsungPayReady?.();
@@ -149,6 +157,9 @@ export function TapSamsungPay({
   const handleChargeCreated = useCallback(
     (event: { nativeEvent: { data: string } }) => {
       onSamsungPayChargeCreated?.(event.nativeEvent.data);
+      // Reset the button to its first-launch state by remounting the native view.
+      inProgress.current = false;
+      setReloadKey((k) => k + 1);
     },
     [onSamsungPayChargeCreated]
   );
@@ -184,6 +195,7 @@ export function TapSamsungPay({
     <View style={[style, styles.container]}>
       <ShimmerBackground theme={configuration.interface?.theme ?? 'light'} />
       <NativeSamsungPayView
+        key={reloadKey}
         style={styles.nativeView}
         configuration={JSON.stringify(configuration)}
         onSamsungPayReady={handleReady}
