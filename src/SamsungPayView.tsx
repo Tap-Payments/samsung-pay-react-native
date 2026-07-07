@@ -150,6 +150,7 @@ export function TapSamsungPay({
     (event: { nativeEvent: { data: string } }) => {
       inProgress.current = false;
       onSamsungPaySuccess?.(event.nativeEvent.data);
+      setReloadKey((k) => k + 1);
     },
     [onSamsungPaySuccess]
   );

@@ -59,7 +59,7 @@ export interface SamsungPayConfiguration {
   interface: SamsungPayInterface;
   reference?: SamsungPayReference;
   post?: SamsungPayPost;
-  scope: 'charge';
+  scope: 'charge' | 'taptoken';
   redirect: string;
   metadata?: string;
   paymentMethod: 'samsungpay';
