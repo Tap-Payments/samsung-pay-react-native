@@ -4,6 +4,8 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useImperativeHandle,
+  forwardRef,
 } from 'react';
 import {
   Platform,
@@ -14,7 +16,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import NativeSamsungPayView from './NativeSamsungPayView';
+import NativeSamsungPayView, { Commands } from './NativeSamsungPayView';
 import type { SamsungPayConfiguration } from './types';
 
 // Exact values from the Lottie JSONs:
@@ -109,6 +111,22 @@ const ShimmerBackground = ({ theme }: { theme: 'light' | 'dark' }) => {
 export interface TapSamsungPayProps {
   configuration: SamsungPayConfiguration;
   style?: StyleProp<ViewStyle>;
+  /**
+   * Chooses the integration mode:
+   * - `false` (default) — renders the native Samsung Pay button (WebView).
+   * - `true` — hides the native button behind your own view (`children`);
+   *   trigger the payment by calling `ref.startPayment()` after
+   *   `onSamsungPayReady` has fired.
+   *
+   * When omitted, the mode is inferred from whether `children` is provided.
+   */
+  useCustomView?: boolean;
+  /**
+   * Your own button/view, rendered instead of the native Samsung Pay button
+   * when `useCustomView` is true. Trigger the payment from your own press
+   * handler by calling `ref.startPayment()` — only after `onSamsungPayReady`.
+   */
+  children?: React.ReactNode;
   onSamsungPayReady?: () => void;
   onSamsungPayClick?: () => void;
   onSamsungPaySuccess?: (data: string) => void;
@@ -118,85 +136,136 @@ export interface TapSamsungPayProps {
   onSamsungPayError?: (error: string) => void;
 }
 
-export function TapSamsungPay({
-  configuration,
-  style,
-  onSamsungPayReady,
-  onSamsungPayClick,
-  onSamsungPaySuccess,
-  onSamsungPayChargeCreated,
-  onSamsungPayOrderCreated,
-  onSamsungPayCancel,
-  onSamsungPayError,
-}: Readonly<TapSamsungPayProps>): React.ReactElement | null {
-  const inProgress = useRef(false);
-  // Bumping this key remounts the native view, giving a fresh button identical to first launch.
-  const [reloadKey, setReloadKey] = useState(0);
+export interface TapSamsungPayRef {
+  /**
+   * Programmatically presses the (hidden) Samsung Pay button.
+   * Returns true if the press was dispatched, false if the button is not
+   * ready yet (`onSamsungPayReady` has not fired) or a payment is in progress.
+   */
+  startPayment: () => boolean;
+  /** Whether the Samsung Pay button is ready to accept a press. */
+  isReady: () => boolean;
+}
 
-  const handleReady = useCallback(() => {
-    onSamsungPayReady?.();
-  }, [onSamsungPayReady]);
-
-  const handleClick = useCallback(
-    (_event: { nativeEvent: object }) => {
-      if (inProgress.current) return;
-      inProgress.current = true;
-      onSamsungPayClick?.();
+export const TapSamsungPay = forwardRef<TapSamsungPayRef, TapSamsungPayProps>(
+  function TapSamsungPay(
+    {
+      configuration,
+      style,
+      useCustomView,
+      children,
+      onSamsungPayReady,
+      onSamsungPayClick,
+      onSamsungPaySuccess,
+      onSamsungPayChargeCreated,
+      onSamsungPayOrderCreated,
+      onSamsungPayCancel,
+      onSamsungPayError,
     },
-    [onSamsungPayClick]
-  );
+    ref
+  ): React.ReactElement | null {
+    const inProgress = useRef(false);
+    const isReadyRef = useRef(false);
+    const nativeRef =
+      useRef<React.ElementRef<typeof NativeSamsungPayView>>(null);
+    // Bumping this key remounts the native view, giving a fresh button identical to first launch.
+    const [reloadKey, setReloadKey] = useState(0);
 
-  const handleSuccess = useCallback(
-    (event: { nativeEvent: { data: string } }) => {
-      inProgress.current = false;
-      onSamsungPaySuccess?.(event.nativeEvent.data);
-      setReloadKey((k) => k + 1);
-    },
-    [onSamsungPaySuccess]
-  );
+    const handleReady = useCallback(() => {
+      isReadyRef.current = true;
+      onSamsungPayReady?.();
+    }, [onSamsungPayReady]);
 
-  const handleChargeCreated = useCallback(
-    (event: { nativeEvent: { data: string } }) => {
-      onSamsungPayChargeCreated?.(event.nativeEvent.data);
-      // Reset the button to its first-launch state by remounting the native view.
-      inProgress.current = false;
-      setReloadKey((k) => k + 1);
-    },
-    [onSamsungPayChargeCreated]
-  );
+    const handleClick = useCallback(
+      (_event: { nativeEvent: object }) => {
+        if (inProgress.current) return;
+        inProgress.current = true;
+        onSamsungPayClick?.();
+      },
+      [onSamsungPayClick]
+    );
 
-  const handleOrderCreated = useCallback(
-    (event: { nativeEvent: { data: string } }) => {
-      onSamsungPayOrderCreated?.(event.nativeEvent.data);
-    },
-    [onSamsungPayOrderCreated]
-  );
+    const handleSuccess = useCallback(
+      (event: { nativeEvent: { data: string } }) => {
+        inProgress.current = false;
+        isReadyRef.current = false;
+        onSamsungPaySuccess?.(event.nativeEvent.data);
+        setReloadKey((k) => k + 1);
+      },
+      [onSamsungPaySuccess]
+    );
 
-  const handleCancel = useCallback(
-    (_event: { nativeEvent: object }) => {
-      inProgress.current = false;
-      onSamsungPayCancel?.();
-    },
-    [onSamsungPayCancel]
-  );
+    const handleChargeCreated = useCallback(
+      (event: { nativeEvent: { data: string } }) => {
+        onSamsungPayChargeCreated?.(event.nativeEvent.data);
+        // Reset the button to its first-launch state by remounting the native view.
+        inProgress.current = false;
+        isReadyRef.current = false;
+        setReloadKey((k) => k + 1);
+      },
+      [onSamsungPayChargeCreated]
+    );
 
-  const handleError = useCallback(
-    (event: { nativeEvent: { error: string } }) => {
-      inProgress.current = false;
-      onSamsungPayError?.(event.nativeEvent.error);
-    },
-    [onSamsungPayError]
-  );
+    const handleOrderCreated = useCallback(
+      (event: { nativeEvent: { data: string } }) => {
+        onSamsungPayOrderCreated?.(event.nativeEvent.data);
+      },
+      [onSamsungPayOrderCreated]
+    );
 
-  if (Platform.OS !== 'android') {
-    return null;
-  }
+    const handleCancel = useCallback(
+      (_event: { nativeEvent: object }) => {
+        inProgress.current = false;
+        onSamsungPayCancel?.();
+      },
+      [onSamsungPayCancel]
+    );
 
-  return (
-    <View style={[style, styles.container]}>
-      <ShimmerBackground theme={configuration.interface?.theme ?? 'light'} />
+    const handleError = useCallback(
+      (event: { nativeEvent: { error: string } }) => {
+        inProgress.current = false;
+        onSamsungPayError?.(event.nativeEvent.error);
+      },
+      [onSamsungPayError]
+    );
+
+    const startPayment = useCallback((): boolean => {
+      if (!isReadyRef.current) {
+        console.warn(
+          '[TapSamsungPay] startPayment() called before onSamsungPayReady — ignored.'
+        );
+        return false;
+      }
+      if (inProgress.current) {
+        return false;
+      }
+      if (!nativeRef.current) {
+        return false;
+      }
+      Commands.triggerPayment(nativeRef.current);
+      return true;
+    }, []);
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        startPayment,
+        isReady: () => isReadyRef.current,
+      }),
+      [startPayment]
+    );
+
+    if (Platform.OS !== 'android') {
+      return null;
+    }
+
+    // Explicit boolean wins; when omitted, infer from the presence of children.
+    const hasCustomView = useCustomView ?? children != null;
+
+    const nativeView = (
       <NativeSamsungPayView
         key={reloadKey}
+        ref={nativeRef}
         style={styles.nativeView}
         configuration={JSON.stringify(configuration)}
         onSamsungPayReady={handleReady}
@@ -207,12 +276,38 @@ export function TapSamsungPay({
         onSamsungPayCancel={handleCancel}
         onSamsungPayError={handleError}
       />
-    </View>
-  );
-}
+    );
+
+    if (hasCustomView) {
+      // Custom-view mode: the native button (WebView) stays mounted and laid out
+      // behind the user's view, but invisible and untouchable. Payment is
+      // triggered programmatically via ref.startPayment().
+      return (
+        <View style={[style, styles.customContainer]}>
+          <View style={styles.hiddenNative} pointerEvents="none">
+            {nativeView}
+          </View>
+          {children}
+        </View>
+      );
+    }
+
+    return (
+      <View style={[style, styles.container]}>
+        <ShimmerBackground theme={configuration.interface?.theme ?? 'light'} />
+        {nativeView}
+      </View>
+    );
+  }
+);
 
 const styles = StyleSheet.create({
   container: { minHeight: 48, borderRadius: 8, overflow: 'hidden' },
+  // Custom-view mode: the user's view sizes the container; no forced radius.
+  customContainer: { minHeight: 48 },
+  // Keeps the WebView attached and laid out (it must have a real size to
+  // receive the synthetic press) while staying invisible under the custom view.
+  hiddenNative: { ...StyleSheet.absoluteFillObject, opacity: 0 },
   nativeView: { flex: 1 },
   shimmerBg: { overflow: 'hidden', borderRadius: 8 },
   shimmerBand: {

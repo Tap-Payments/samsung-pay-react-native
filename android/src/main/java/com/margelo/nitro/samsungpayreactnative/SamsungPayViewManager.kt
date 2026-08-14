@@ -11,7 +11,6 @@ import com.facebook.react.viewmanagers.NativeSamsungPayViewManagerDelegate
 import com.facebook.react.viewmanagers.NativeSamsungPayViewManagerInterface
 import com.tap.company.samsungpay_sdk.SamsungPayConfiguration
 import com.tap.company.samsungpay_sdk.TapSamsungPay
-import org.json.JSONArray
 import org.json.JSONObject
 
 class SamsungPayViewManager :
@@ -65,7 +64,7 @@ class SamsungPayViewManager :
         view.tag = value
         val reactContext = view.context as? ThemedReactContext ?: return
         val activity = reactContext.currentActivity ?: return
-        val configMap = jsonObjectToHashMap(JSONObject(value))
+        val configMap = SamsungPayInternals.jsonObjectToHashMap(JSONObject(value))
         val samsungPayDelegate = SamsungPayDelegate(view)
         SamsungPayConfiguration.configureWithTapSamsungPayDictionaryConfiguration(
             activity,
@@ -79,6 +78,19 @@ class SamsungPayViewManager :
             if (view.width > 0 && view.height > 0) {
                 forceChildBounds(view, view.width, view.height)
             }
+        }
+    }
+
+    /**
+     * Programmatically presses the Samsung Pay button rendered inside the SDK's WebView by
+     * dispatching a synthetic tap (down + up) at the WebView's center. Used by the JS
+     * `startPayment()` ref method when the app renders its own custom button over a hidden
+     * native view. The JS side gates this on onSamsungPayReady, so by the time it runs the
+     * WebView exists and is laid out.
+     */
+    override fun triggerPayment(view: TapSamsungPay) {
+        SamsungPayInternals.findWebView(view)?.let {
+            SamsungPayInternals.dispatchSyntheticTap(it)
         }
     }
 
@@ -137,33 +149,4 @@ class SamsungPayViewManager :
         )
     }
 
-    private fun jsonObjectToHashMap(json: JSONObject): LinkedHashMap<String, Any> {
-        val result = LinkedHashMap<String, Any>()
-        val keys = json.keys()
-        while (keys.hasNext()) {
-            val key = keys.next()
-            val value = json.get(key)
-            when (value) {
-                is JSONObject -> result[key] = jsonObjectToHashMap(value)
-                is JSONArray -> result[key] = jsonArrayToList(value)
-                JSONObject.NULL -> { /* skip null values */ }
-                else -> result[key] = value
-            }
-        }
-        return result
-    }
-
-    private fun jsonArrayToList(array: JSONArray): List<Any> {
-        val result = mutableListOf<Any>()
-        for (i in 0 until array.length()) {
-            val value = array.get(i)
-            when (value) {
-                is JSONObject -> result.add(jsonObjectToHashMap(value))
-                is JSONArray -> result.add(jsonArrayToList(value))
-                JSONObject.NULL -> { /* skip */ }
-                else -> result.add(value)
-            }
-        }
-        return result
-    }
 }

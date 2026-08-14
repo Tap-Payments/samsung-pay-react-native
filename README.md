@@ -6,6 +6,20 @@ This guide demonstrates how to integrate the Samsung Pay SDK into your React Nat
 
 The Samsung Pay React Native wrapper enables you to process Samsung Pay transactions in your React Native app. This guide covers installation, configuration (including hash string generation), implementation, and callback handling.
 
+### Integration modes
+
+Pick whichever fits your UI — all modes share the same configuration and lifecycle events:
+
+| Mode | What you render | How the payment starts |
+|------|-----------------|------------------------|
+| **Native button** | `<TapSamsungPay />` | User taps the official Samsung Pay button |
+| **Custom view** | `<TapSamsungPay useCustomView>` + your own view | Your press handler calls `ref.startPayment()` |
+| **Headless (one call)** | Nothing — no component in the tree | Any JS function calls `await SamsungPay.pay(config)` |
+| **Headless (granular)** | Nothing | `SamsungPay.init(config)` once, then `SamsungPay.startPayment()` from anywhere |
+| **Branded button** | `<SamsungPayButton />` — a plain button with Samsung Pay styling | Your `onPress` callback (typically calls `SamsungPay.pay(config)`) |
+
+Under the hood every mode drives the same hidden Tap SDK WebView; in the custom/headless modes it stays invisible (off-screen, alpha 0) and the SDK presses its button for you with a synthetic native tap.
+
 ---
 
 ## Table of Contents
@@ -220,6 +234,203 @@ Use the `TapSamsungPay` component with your configuration and callbacks. The com
 />
 ```
 
+### Step 3 (optional): Use your own custom button
+
+The `useCustomView` boolean chooses between the two integration modes:
+
+| `useCustomView` | Behavior |
+|-----------------|----------|
+| `false` (default) | Renders the default native Samsung Pay button |
+| `true` | Hides the native button behind your own view (`children`); you trigger the payment via `ref.startPayment()` |
+
+If `useCustomView` is omitted, the mode is inferred from whether `children` is provided.
+
+In custom mode the native Samsung Pay button (a WebView) stays mounted but hidden behind your view, and you trigger the payment programmatically through the component ref.
+
+`startPayment()` only works after `onSamsungPayReady` has fired — calls before that are ignored (it returns `false`). Disable your button until then.
+
+```tsx
+import { useRef, useState } from 'react';
+import { Pressable, Text } from 'react-native';
+import { TapSamsungPay } from 'samsung-pay-react-native';
+import type { TapSamsungPayRef } from 'samsung-pay-react-native';
+
+function Checkout() {
+  const payRef = useRef<TapSamsungPayRef>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  return (
+    <TapSamsungPay
+      ref={payRef}
+      configuration={config}
+      useCustomView={true}
+      onSamsungPayReady={() => setIsReady(true)}
+      onSamsungPaySuccess={(data) => console.log('Success', data)}
+      onSamsungPayError={(error) => console.error('Error', error)}
+    >
+      {/* Your own view — rendered instead of the native button */}
+      <Pressable
+        disabled={!isReady}
+        onPress={() => payRef.current?.startPayment()}
+        style={{ height: 48, borderRadius: 24, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Text style={{ color: '#fff' }}>Pay with Samsung Pay</Text>
+      </Pressable>
+    </TapSamsungPay>
+  );
+}
+```
+
+**Ref API:**
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `startPayment()` | `boolean` | Presses the hidden Samsung Pay button. Returns `true` if dispatched; `false` if not ready yet or a payment is already in progress |
+| `isReady()` | `boolean` | Whether `onSamsungPayReady` has fired for the current button instance |
+
+All lifecycle callbacks (`onSamsungPayClick`, `onSamsungPaySuccess`, etc.) fire exactly as they do in default mode.
+
+### Step 4 (optional): Headless mode — no component at all
+
+If you don't want anything in your component tree, use the `SamsungPay` module instead of the `TapSamsungPay` component. The SDK's WebView is created natively and attached invisibly off-screen, so any JS button anywhere can start a payment.
+
+**One-call usage** — `pay()` handles everything (init if needed, wait for readiness, press, and resolve with the outcome):
+
+```tsx
+import { SamsungPay } from 'samsung-pay-react-native';
+
+async function onPayPress() {
+  try {
+    const result = await SamsungPay.pay(config);
+    // result: { status: 'success' | 'chargeCreated', data } or { status: 'cancelled' }
+    if (result.status !== 'cancelled') {
+      console.log(result.status, result.data);
+    }
+  } catch (e) {
+    console.error('Samsung Pay error', e);
+  }
+}
+```
+
+Tip: also call `SamsungPay.init(config)` when your checkout screen mounts — `pay()` then skips initialization and fires instantly. Without it, the first `pay()` call initializes on demand (a couple of seconds before the payment sheet appears).
+
+**Granular usage** — init once, listen to events, trigger when you choose:
+
+```tsx
+import { useEffect, useState } from 'react';
+import { SamsungPay } from 'samsung-pay-react-native';
+
+function AnyScreen() {
+  const [canPay, setCanPay] = useState(false);
+
+  useEffect(() => {
+    SamsungPay.init(config); // safe to call again to reconfigure
+
+    const subs = [
+      SamsungPay.addListener('ready', () => setCanPay(true)),
+      SamsungPay.addListener('success', (data) => console.log('Success', data)),
+      SamsungPay.addListener('chargeCreated', (data) => console.log('Charge', data)),
+      SamsungPay.addListener('cancel', () => console.log('Cancelled')),
+      SamsungPay.addListener('error', (error) => console.error(error)),
+    ];
+    return () => subs.forEach((s) => s.remove());
+  }, []);
+
+  return (
+    <Button
+      title="Pay with Samsung Pay"
+      disabled={!canPay}
+      onPress={() => SamsungPay.startPayment()}
+    />
+  );
+}
+```
+
+**Module API:**
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `pay(configuration)` | `Promise<SamsungPayResult>` | One call for the whole flow: initializes if needed, waits for readiness, presses the button, resolves with `{ status: 'success' \| 'chargeCreated', data }` or `{ status: 'cancelled' }`; rejects on errors. Re-calling while in flight returns the same promise |
+| `init(configuration)` | `void` | Creates the hidden Samsung Pay WebView natively. Call after the app is visible. Re-calling disposes the previous instance and reconfigures |
+| `startPayment()` | `boolean` | Presses the hidden button. Returns `false` (with a warning) before the `ready` event or while a payment is in progress |
+| `isReady()` | `boolean` | Whether the button is ready for a press |
+| `addListener(event, cb)` | `EventSubscription` | Events: `ready`, `click`, `success`, `chargeCreated`, `orderCreated`, `cancel`, `error`. Call `.remove()` on unmount |
+| `dispose()` | `void` | Tears down the hidden WebView |
+
+After `success`/`chargeCreated` the hidden button is recreated automatically, so the next `startPayment()` works once `ready` fires again.
+
+**`SamsungPayResult` type:**
+
+```ts
+type SamsungPayResult =
+  | { status: 'success'; data: string }        // scope 'taptoken'
+  | { status: 'chargeCreated'; data: string }  // scope 'charge'
+  | { status: 'cancelled' };
+```
+
+**Combining `pay()` with listeners** — they don't conflict. `pay()` gives you the *outcome* (one awaitable answer per attempt) while `addListener` gives you the *play-by-play* (every intermediate event, useful for analytics, logging, or enabling a pre-warmed button). Every event is delivered to both — your `success` listener fires *and* the `pay()` promise resolves:
+
+```tsx
+useEffect(() => {
+  const subs = [
+    SamsungPay.addListener('ready', () => console.log('warm')),
+    SamsungPay.addListener('orderCreated', (data) => analytics.track('order', data)),
+    SamsungPay.addListener('error', (err) => console.warn(err)),
+  ];
+  return () => subs.forEach((s) => s.remove());
+}, []);
+
+const onPay = async () => {
+  const result = await SamsungPay.pay(config); // outcome still arrives here
+};
+```
+
+### Step 5 (optional): The branded button component
+
+`SamsungPayButton` is a standalone Samsung Pay–styled button that only fires a callback — it starts nothing by itself, so you can wire it to any flow (usually the one-call API):
+
+The simplest form passes your existing configuration — the button styles itself from `configuration.interface` (`theme`, `locale`, `edges`), so it always matches the rest of your Samsung Pay setup:
+
+```tsx
+import { SamsungPay, SamsungPayButton } from 'samsung-pay-react-native';
+
+<SamsungPayButton
+  configuration={config}               // theme/locale/edges from config.interface
+  onPress={() => SamsungPay.pay(config)}
+/>
+```
+
+Every option can also be set (or overridden) individually:
+
+```tsx
+<SamsungPayButton
+  onPress={() => SamsungPay.pay(config)}
+  theme="dark"        // 'dark' (default) | 'light' — black vs white variant
+  edges="curved"      // 'curved' (default) | 'flat' — pill vs small radius
+  locale="en"         // 'en' (default) | 'ar' — Arabic prefix + RTL layout
+  label="Pay with"    // overrides the locale default; pass '' for brand only
+  loading={inFlight}  // spinner while pay() is pending
+  disabled={false}
+  style={{ marginTop: 16 }}
+/>
+```
+
+Guideline alignment: the two approved color variants (black button/white wordmark, and white button/black wordmark with a black keyline), a 48dp minimum touch height, and an untranslated Samsung Pay wordmark — `locale="ar"` renders "ادفع بواسطة Samsung Pay" right-to-left while keeping the wordmark in Latin script, per Samsung's branding guidelines.
+
+Unlike `<TapSamsungPay />` (which renders the official button from the Tap web SDK and starts the payment itself), `SamsungPayButton` is pure UI — no configuration, no WebView, works before `init()` is ever called.
+
+Note on official branding: Samsung does not ship a native button widget in any SDK — they distribute [official button image assets and branding guidelines](https://developer.samsung.com/pay/downloads-and-resources/branding-guidelines.html) instead. For pixel-authentic branding either use `<TapSamsungPay />` (the Tap web SDK renders Samsung's real button), or download the official asset and pass it as `children`:
+
+```tsx
+<SamsungPayButton onPress={() => SamsungPay.pay(config)}>
+  <Image source={require('./assets/samsung-pay-button.png')} style={{ height: 24 }} resizeMode="contain" />
+</SamsungPayButton>
+```
+
+### Tip: building a payment-methods bottom sheet
+
+A common pattern is a bottom sheet where the user picks Samsung Pay among other payment methods, optionally remembering the choice so later checkouts skip the sheet. Since the headless `SamsungPay` API needs no component in the tree, the sheet can be plain UI. See the working demo in [`example/src/PaymentSheet.tsx`](example/src/PaymentSheet.tsx) and its wiring in [`example/src/App.tsx`](example/src/App.tsx).
+
 ---
 
 ## Callback Handling
@@ -363,6 +574,9 @@ const styles = StyleSheet.create({
 
 | Issue | Solution |
 |-------|----------|
+| `TurboModuleRegistry.getEnforcing(...): 'SamsungPayModule' could not be found` | The app binary predates the headless module — rebuild and reinstall the Android app (`npx expo run:android` / `gradlew installDebug`); a JS/Metro reload is not enough |
+| `startPayment()` returns `false` / warns | It was called before the `ready` event (or while a payment is in flight). Wait for `ready`, or use `SamsungPay.pay()` which handles readiness itself |
+| First `pay()` is slow (~2s) | Without pre-warming, `pay()` initializes on demand. Call `SamsungPay.init(config)` when the checkout screen mounts to make the first press instant |
 | SDK not initializing | Check `operator.publicKey`, JitPack in `build.gradle`, and INTERNET permission |
 | HMAC hash mismatch | Ensure message format and key match server-side; use the exact concatenation order |
 | Button not visible / clipped | Use at least 48pt height (e.g. `height: 56`); the component enforces `minHeight: 48` |

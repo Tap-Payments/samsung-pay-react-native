@@ -3546,17 +3546,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ts-morph/common@npm:~0.28.1":
-  version: 0.28.1
-  resolution: "@ts-morph/common@npm:0.28.1"
-  dependencies:
-    minimatch: "npm:^10.0.1"
-    path-browserify: "npm:^1.0.1"
-    tinyglobby: "npm:^0.2.14"
-  checksum: 10c0/d51276d840997e0f8f83e04f8b1689135bb12588a7ddbed575f87848d5737eeae31e242685d6449de27573e8ed30892157fea643393cb875e175f2711200bc50
-  languageName: node
-  linkType: hard
-
 "@types/babel__core@npm:^7.1.14":
   version: 7.20.5
   resolution: "@types/babel__core@npm:7.20.5"
@@ -4947,13 +4936,6 @@ __metadata:
   version: 4.6.0
   resolution: "co@npm:4.6.0"
   checksum: 10c0/c0e85ea0ca8bf0a50cbdca82efc5af0301240ca88ebe3644a6ffb8ffe911f34d40f8fbcf8f1d52c5ddd66706abd4d3bfcd64259f1e8e2371d4f47573b0dc8c28
-  languageName: node
-  linkType: hard
-
-"code-block-writer@npm:^13.0.3":
-  version: 13.0.3
-  resolution: "code-block-writer@npm:13.0.3"
-  checksum: 10c0/87db97b37583f71cfd7eced8bf3f0a0a0ca53af912751a734372b36c08cd27f3e8a4878ec05591c0cd9ae11bea8add1423e132d660edd86aab952656dd41fd66
   languageName: node
   linkType: hard
 
@@ -9840,7 +9822,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minimatch@npm:^10.0.1, minimatch@npm:^10.2.2":
+"minimatch@npm:^10.2.2":
   version: 10.2.4
   resolution: "minimatch@npm:10.2.4"
   dependencies:
@@ -10044,21 +10026,6 @@ __metadata:
   dependencies:
     type-fest: "npm:^2.5.1"
   checksum: 10c0/9faec009b8b403efbc407f45306d07de5cc58e09df5b00bdd55b01384cd18b0fd29a97aef6915428ba3b5abb0a5c132c3507468c0c3c101e8d737c1337386786
-  languageName: node
-  linkType: hard
-
-"nitrogen@npm:^0.29.8":
-  version: 0.29.8
-  resolution: "nitrogen@npm:0.29.8"
-  dependencies:
-    chalk: "npm:^5.3.0"
-    react-native-nitro-modules: "npm:^0.29.8"
-    ts-morph: "npm:^27.0.0"
-    yargs: "npm:^17.7.2"
-    zod: "npm:^4.0.5"
-  bin:
-    nitrogen: lib/index.js
-  checksum: 10c0/30ee91d24e9c7226974dc75466b7151ce31c9f87aa307ef9f088445d2f0ea652914ba59e6cc3e3a80f7fa520741b6ed7b8182b7cb70109c46c0c706919818cdc
   languageName: node
   linkType: hard
 
@@ -10629,13 +10596,6 @@ __metadata:
   version: 1.3.3
   resolution: "parseurl@npm:1.3.3"
   checksum: 10c0/90dd4760d6f6174adb9f20cf0965ae12e23879b5f5464f38e92fce8073354341e4b3b76fa3d878351efe7d01e617121955284cfd002ab087fba1a0726ec0b4f5
-  languageName: node
-  linkType: hard
-
-"path-browserify@npm:^1.0.1":
-  version: 1.0.1
-  resolution: "path-browserify@npm:1.0.1"
-  checksum: 10c0/8b8c3fd5c66bd340272180590ae4ff139769e9ab79522e2eb82e3d571a89b8117c04147f65ad066dccfb42fcad902e5b7d794b3d35e0fd840491a8ddbedf8c66
   languageName: node
   linkType: hard
 
@@ -11550,19 +11510,16 @@ __metadata:
     eslint-plugin-prettier: "npm:^5.5.4"
     jest: "npm:^29.7.0"
     lefthook: "npm:^2.0.3"
-    nitrogen: "npm:^0.29.8"
     prettier: "npm:^2.8.8"
     react: "npm:19.2.0"
     react-native: "npm:0.83.2"
     react-native-builder-bob: "npm:^0.40.13"
-    react-native-nitro-modules: "npm:^0.29.8"
     release-it: "npm:^19.0.4"
     turbo: "npm:^2.5.6"
     typescript: "npm:^5.9.2"
   peerDependencies:
     react: "*"
     react-native: "*"
-    react-native-nitro-modules: ^0.29.8
   languageName: unknown
   linkType: soft
 
@@ -12322,7 +12279,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tinyglobby@npm:0.2.15, tinyglobby@npm:^0.2.12, tinyglobby@npm:^0.2.14, tinyglobby@npm:^0.2.15":
+"tinyglobby@npm:0.2.15, tinyglobby@npm:^0.2.12, tinyglobby@npm:^0.2.15":
   version: 0.2.15
   resolution: "tinyglobby@npm:0.2.15"
   dependencies:
@@ -12368,16 +12325,6 @@ __metadata:
   peerDependencies:
     typescript: ">=4.8.4"
   checksum: 10c0/ed185861aef4e7124366a3f6561113557a57504267d4d452a51e0ba516a9b6e713b56b4aeaab9fa13de9db9ab755c65c8c13a777dba9133c214632cb7b65c083
-  languageName: node
-  linkType: hard
-
-"ts-morph@npm:^27.0.0":
-  version: 27.0.2
-  resolution: "ts-morph@npm:27.0.2"
-  dependencies:
-    "@ts-morph/common": "npm:~0.28.1"
-    code-block-writer: "npm:^13.0.3"
-  checksum: 10c0/224715cc6d97b8ff5afd3986f9629f912a0ebd83eaecbdca91c35cf10a98f607c663f666e7ea5e6afab00563d00dc80fa7a13552cc7f1cef735261c3217d0863
   languageName: node
   linkType: hard
 
@@ -13116,7 +13063,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yargs@npm:^17.0.0, yargs@npm:^17.3.1, yargs@npm:^17.5.1, yargs@npm:^17.6.2, yargs@npm:^17.7.2":
+"yargs@npm:^17.0.0, yargs@npm:^17.3.1, yargs@npm:^17.5.1, yargs@npm:^17.6.2":
   version: 17.7.2
   resolution: "yargs@npm:17.7.2"
   dependencies:
@@ -13168,7 +13115,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^3.25.0 || ^4.0.0, zod@npm:^4.0.5":
+"zod@npm:^3.25.0 || ^4.0.0":
   version: 4.3.6
   resolution: "zod@npm:4.3.6"
   checksum: 10c0/860d25a81ab41d33aa25f8d0d07b091a04acb426e605f396227a796e9e800c44723ed96d0f53a512b57be3d1520f45bf69c0cb3b378a232a00787a2609625307
