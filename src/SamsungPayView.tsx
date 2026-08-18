@@ -307,7 +307,17 @@ const styles = StyleSheet.create({
   customContainer: { minHeight: 48 },
   // Keeps the WebView attached and laid out (it must have a real size to
   // receive the synthetic press) while staying invisible under the custom view.
-  hiddenNative: { ...StyleSheet.absoluteFillObject, opacity: 0 },
+  // Inlined instead of `...StyleSheet.absoluteFillObject`: that export was
+  // removed in React Native 0.86, where spreading it yields an empty object and
+  // silently drops the absolute positioning this view depends on.
+  hiddenNative: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0,
+  },
   nativeView: { flex: 1 },
   shimmerBg: { overflow: 'hidden', borderRadius: 8 },
   shimmerBand: {
