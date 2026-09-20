@@ -108,6 +108,18 @@ function ensureInternalSubscriptions(
  */
 export const SamsungPay = {
   /**
+   * Whether the device can complete a Samsung Pay flow — Samsung Wallet is
+   * installed (or some app handles the `samsungpay://` deep link). Always
+   * `false` on iOS. Does not require `init()`; use it to decide whether to
+   * show the Samsung Pay button at all.
+   *
+   * Note: this checks the app is present, not that the user has added a card.
+   */
+  isAvailable(): boolean {
+    return getModule()?.isSamsungPayAvailable() ?? false;
+  },
+
+  /**
    * The one-call payment flow: initializes Samsung Pay if needed (skipped when
    * already initialized with the same configuration), waits for readiness,
    * presses the hidden button, and resolves with the outcome —

@@ -1,6 +1,9 @@
 package com.margelo.nitro.samsungpayreactnative
 
 import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import com.facebook.react.bridge.ReactApplicationContext
@@ -44,6 +47,9 @@ class SamsungPayModule(reactContext: ReactApplicationContext) :
     }
 
     override fun isReady(): Boolean = ready && !inProgress
+
+    override fun isSamsungPayAvailable(): Boolean =
+        SamsungPayInternals.isSamsungPayAvailable(reactApplicationContext.packageManager)
 
     override fun dispose() {
         configurationJson = null

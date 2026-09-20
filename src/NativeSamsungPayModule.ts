@@ -21,6 +21,13 @@ export interface Spec extends TurboModule {
   /** Whether the hidden button is ready to accept a press. */
   isReady(): boolean;
 
+  /**
+   * Whether the device can complete a Samsung Pay flow: Samsung Wallet is
+   * installed or some app handles the samsungpay:// deep link. Does not
+   * require init() — safe to call at any time, e.g. to hide the button.
+   */
+  isSamsungPayAvailable(): boolean;
+
   /** Tears down the hidden WebView and releases the SDK instance. */
   dispose(): void;
 

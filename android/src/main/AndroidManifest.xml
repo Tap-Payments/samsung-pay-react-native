@@ -1,3 +1,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+      Package visibility (Android 11+). Required for isSamsungPayAvailable():
+      without these, PackageManager reports Samsung Wallet as "not installed"
+      even when it is. Merged into the host app's manifest automatically.
+    -->
+    <queries>
+        <!-- Samsung Wallet / Samsung Pay (Global) -->
+        <package android:name="com.samsung.android.spay" />
+        <!-- Samsung Pay (Taiwan variant) -->
+        <package android:name="com.samsung.android.spaytw" />
+        <!-- Whatever app handles the samsungpay:// deep link the Tap SDK opens -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="samsungpay" />
+        </intent>
+    </queries>
 </manifest>

@@ -1,5 +1,8 @@
 package com.margelo.nitro.samsungpayreactnative
 
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
@@ -10,6 +13,33 @@ import org.json.JSONObject
 
 /** Helpers shared between the view manager (component mode) and the headless module. */
 internal object SamsungPayInternals {
+
+    /** Known Samsung Wallet / Samsung Pay package names, mirrored in AndroidManifest <queries>. */
+    private val SAMSUNG_PAY_PACKAGES = listOf(
+        "com.samsung.android.spay",
+        "com.samsung.android.spaytw"
+    )
+
+    /** Scheme the Tap SDK opens to hand off to Samsung Wallet. */
+    private const val SAMSUNG_PAY_SCHEME = "samsungpay"
+
+    /**
+     * Whether this device can complete a Samsung Pay flow: some app handles the
+     * samsungpay:// deep link the SDK fires, or a known Samsung Wallet package is
+     * installed. Relies on the <queries> block in the library manifest for API 30+.
+     */
+    fun isSamsungPayAvailable(pm: PackageManager): Boolean {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("$SAMSUNG_PAY_SCHEME://"))
+        if (intent.resolveActivity(pm) != null) return true
+        return SAMSUNG_PAY_PACKAGES.any { pkg ->
+            try {
+                pm.getPackageInfo(pkg, 0)
+                true
+            } catch (e: PackageManager.NameNotFoundException) {
+                false
+            }
+        }
+    }
 
     /** Depth-first search for the SDK's internal WebView. */
     fun findWebView(view: View): WebView? {

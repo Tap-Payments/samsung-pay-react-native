@@ -24,7 +24,7 @@ const config: SamsungPayConfiguration = {
     },
     name: [{ lang: 'en', first: 'TAP', middle: '', last: 'PAYMENTS' }],
   },
-  interface: { locale: 'en', edges: 'curved', theme: 'light' },
+  interface: { locale: 'ar', edges: 'flat', theme: 'light' },
   reference: { transaction: '', order: '' },
   post: { url: '' },
   scope: 'taptoken',
@@ -50,8 +50,15 @@ export default function App() {
   // Demo-only "saved method": kept in memory. Persist it (e.g. AsyncStorage)
   // in a real app.
   const savedMethod = useRef<PaymentMethod | null>(null);
+  // Sync, no init() needed — decide up front whether to offer Samsung Pay.
+  const samsungPayAvailable = SamsungPay.isAvailable();
 
   useEffect(() => {
+    addEvent(
+      `isAvailable(): ${samsungPayAvailable} — Samsung Wallet ${
+        samsungPayAvailable ? 'installed' : 'NOT installed'
+      }`
+    );
     // Optional: observe the lifecycle (analytics, logging, UI state...)
     const subs = [
       SamsungPay.addListener('ready', () => addEvent('warm')),
@@ -71,7 +78,7 @@ export default function App() {
       ),
     ];
     return () => subs.forEach((s) => s.remove());
-  }, []);
+  }, [samsungPayAvailable]);
 
   const addEvent = (message: string) => {
     setEvents((prev) => [...prev, message]);
@@ -126,6 +133,16 @@ export default function App() {
       keyboardShouldPersistTaps="handled"
     >
       <Text style={styles.title}>Samsung Pay Demo</Text>
+      <Text
+        style={[
+          styles.availability,
+          samsungPayAvailable ? styles.available : styles.unavailable,
+        ]}
+      >
+        {samsungPayAvailable
+          ? '✓ Samsung Pay available on this device'
+          : '✗ Samsung Pay not available on this device'}
+      </Text>
 
       <Pressable style={styles.checkoutButton} onPress={handleCheckout}>
         <Text style={styles.checkoutButtonText}>Checkout — 0.100 KWD</Text>
@@ -194,6 +211,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: 'white',
   },
+  availability: {
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: -12,
+    marginBottom: 20,
+    fontWeight: '600',
+  },
+  available: { color: '#34C759' },
+  unavailable: { color: '#FF453A' },
   checkoutButton: {
     height: 52,
     borderRadius: 12,

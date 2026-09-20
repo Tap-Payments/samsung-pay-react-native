@@ -354,10 +354,21 @@ function AnyScreen() {
 | `init(configuration)` | `void` | Creates the hidden Samsung Pay WebView natively. Call after the app is visible. Re-calling disposes the previous instance and reconfigures |
 | `startPayment()` | `boolean` | Presses the hidden button. Returns `false` (with a warning) before the `ready` event or while a payment is in progress |
 | `isReady()` | `boolean` | Whether the button is ready for a press |
+| `isAvailable()` | `boolean` | Whether Samsung Wallet is installed on this device (always `false` on iOS). Does not need `init()` — use it to decide whether to show the button at all |
 | `addListener(event, cb)` | `EventSubscription` | Events: `ready`, `click`, `success`, `chargeCreated`, `orderCreated`, `cancel`, `error`. Call `.remove()` on unmount |
 | `dispose()` | `void` | Tears down the hidden WebView |
 
 After `success`/`chargeCreated` the hidden button is recreated automatically, so the next `startPayment()` works once `ready` fires again.
+
+**Checking device support** — hide the option entirely on devices without Samsung Wallet:
+
+```tsx
+import { SamsungPay } from 'samsung-pay-react-native';
+
+const showSamsungPay = SamsungPay.isAvailable();
+```
+
+`isAvailable()` is synchronous and needs no `init()`. It reports whether Samsung Wallet / Samsung Pay is installed (or any app handles the `samsungpay://` deep link the SDK opens); it cannot tell whether the user has added a card. The library manifest already declares the required Android 11+ `<queries>` entries, so nothing to add in your app.
 
 **`SamsungPayResult` type:**
 
