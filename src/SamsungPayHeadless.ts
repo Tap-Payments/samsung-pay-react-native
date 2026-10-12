@@ -46,12 +46,58 @@ let pending: {
   reject: (error: Error) => void;
 } | null = null;
 
+// How long pay() waits for the SDK to become ready (init + config + page load)
+// before giving up. Only covers the wait for readiness — once the Samsung
+// Wallet sheet is up there is deliberately no timeout, the user may take a
+// while to authenticate.
+const READY_TIMEOUT_MS = 20000;
+let readyTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearReadyTimer() {
+  if (readyTimer) {
+    clearTimeout(readyTimer);
+    readyTimer = null;
+  }
+}
+
 function settle(result: SamsungPayResult) {
+  clearReadyTimer();
   if (pending) {
     const p = pending;
     pending = null;
     p.resolve(result);
   }
+}
+
+/**
+ * Rejects the pending pay() and resets the module-level state so the NEXT
+ * pay() starts from a fresh init instead of returning a stuck promise.
+ */
+function failPending(error: Error) {
+  clearReadyTimer();
+  awaitingReady = false;
+  // Force a fresh init on the next pay() — the current instance may be broken.
+  initializedConfigJson = null;
+  if (pending) {
+    const p = pending;
+    pending = null;
+    p.reject(error);
+  }
+}
+
+/** Starts the wait-for-ready deadline for the in-flight pay(). */
+function startReadyTimer() {
+  clearReadyTimer();
+  readyTimer = setTimeout(() => {
+    readyTimer = null;
+    if (awaitingReady && pending) {
+      failPending(
+        new Error(
+          'Samsung Pay did not become ready in time. Check the connection and try again.'
+        )
+      );
+    }
+  }, READY_TIMEOUT_MS);
 }
 
 /**
@@ -67,7 +113,13 @@ function ensureInternalSubscriptions(
   module.onSamsungPayReady(() => {
     if (awaitingReady && pending) {
       awaitingReady = false;
-      module.startPayment();
+      clearReadyTimer();
+      if (!module.startPayment()) {
+        // Ready fired but the press was refused — don't leave pay() hanging.
+        failPending(
+          new Error('Samsung Pay could not start the payment. Try again.')
+        );
+      }
     }
   });
   module.onSamsungPaySuccess((data: string) =>
@@ -77,16 +129,7 @@ function ensureInternalSubscriptions(
     settle({ status: 'chargeCreated', data })
   );
   module.onSamsungPayCancel(() => settle({ status: 'cancelled' }));
-  module.onSamsungPayError((error: string) => {
-    awaitingReady = false;
-    // Force a fresh init on the next pay() — the current instance may be broken.
-    initializedConfigJson = null;
-    if (pending) {
-      const p = pending;
-      pending = null;
-      p.reject(new Error(error));
-    }
-  });
+  module.onSamsungPayError((error: string) => failPending(new Error(error)));
 }
 
 /**
@@ -149,7 +192,14 @@ export const SamsungPay = {
     const json = JSON.stringify(configuration);
     if (json === initializedConfigJson && module.isReady()) {
       // Warm instance with the same configuration — pay immediately.
-      module.startPayment();
+      if (!module.startPayment()) {
+        // Refused (raced with a state change): re-initialize and wait for
+        // ready instead of leaving this promise pending forever.
+        awaitingReady = true;
+        initializedConfigJson = json;
+        module.init(json);
+        startReadyTimer();
+      }
     } else {
       awaitingReady = true;
       if (json !== initializedConfigJson) {
@@ -158,6 +208,7 @@ export const SamsungPay = {
       }
       // Same config but not ready yet: init is in flight; the internal
       // 'ready' listener presses the button when it lands.
+      startReadyTimer();
     }
     return promise;
   },
@@ -200,6 +251,7 @@ export const SamsungPay = {
 
   /** Tears down the hidden WebView. Call when payment flows are done. */
   dispose(): void {
+    clearReadyTimer();
     initializedConfigJson = null;
     awaitingReady = false;
     if (pending) {
